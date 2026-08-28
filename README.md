@@ -2,9 +2,14 @@
 
 A cost-governed confluence engine for **BTC-USDC perps on Hyperliquid**.
 
-**Read [`EDGE_REPORT.md`](EDGE_REPORT.md) first.** Verdict after ~300 hypotheses
-across 3.4M bars: interesting market structure, **no economically exploitable
-directional edge**. Do not trade.
+**Read [`EDGE_REPORT.md`](EDGE_REPORT.md) then [`R1_REPORT.md`](R1_REPORT.md).**
+
+Verdict after **~460 hypotheses**: real market structure, and in R-1 a real
+contrarian flow/positioning effect that survives every statistical control —
+but at **0.06 ATR against a 0.436 ATR cost hurdle**, roughly 7× too small to
+trade. **Do not trade.**
+
+The sealed 2020–2022 holdout remains unopened.
 
 Then `STRATUM.md` (execution/risk architecture) and
 `Stratum_Product_Specification-v3.md` (the situation-meter product).
