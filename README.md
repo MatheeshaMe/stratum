@@ -2,8 +2,12 @@
 
 A cost-governed confluence engine for **BTC-USDC perps on Hyperliquid**.
 
-**Read [`STRATUM.md`](STRATUM.md) first — in particular §0, which reports that
-the v1 strategy loses money and explains what replaced it.**
+**Read [`EDGE_REPORT.md`](EDGE_REPORT.md) first.** Verdict after ~300 hypotheses
+across 3.4M bars: interesting market structure, **no economically exploitable
+directional edge**. Do not trade.
+
+Then `STRATUM.md` (execution/risk architecture) and
+`Stratum_Product_Specification-v3.md` (the situation-meter product).
 
 ```
 STRATUM.md              the specification
@@ -21,7 +25,7 @@ data/                   parquet bars, sqlite signals (gitignored)
 | 0 | Recorder running, history ingested, harness reproduces §0 | not started |
 | 1 | Computed levels match the operator's eye | not started |
 | 2 | Harness correctly rejects the known-bad v1 template | **reproduced in Python** |
-| 3 | A hypothesis clears all §13.3 kill criteria | **not passed — do not trade** |
+| 3 | A hypothesis clears all §13.3 kill criteria | **NOT PASSED — see EDGE_REPORT.md** |
 | 4 | 14 clean paper days, expectancy matches backtest | not started |
 
 ## Quick start
