@@ -78,3 +78,30 @@ data/sealed/  SEALED    2020-01..2022-12   NEVER OPENED -- one honest test remai
 ```
 
 Do not open `data/sealed/` for exploratory work. It is worth exactly one test.
+
+---
+
+## R-1 (microstructure & positioning)
+
+| File | Produces |
+|---|---|
+| `r1_features.py` | 38 microstructure features (OI, flow, positioning, book, carry). **All lagged one 5m bar.** |
+| `r1_incremental.py` | AUC(OHLCV) vs AUC(micro) vs AUC(both) across 5 horizons; univariate AUCs |
+| `r1_conditional.py` | Direction AUC by expected-magnitude band; magnitude × direction cells |
+| `r1_events.py` | Event-conditioned forward distributions (simple, non-ML, quantile thresholds fixed in advance) |
+| `r1_rigorous.py` | Same events with C3-corrected block bootstrap, drift control, split-half replication |
+| `r1_economics.py` | C4 control (three models, identical rows) + ATR→bps→cost comparison |
+| `../R1_REPORT.md` | The verdict |
+
+Data: `scripts/fetch_microstructure.py` (Binance `metrics`, `bookDepth`, `fundingRate`).
+The fetcher **refuses the sealed 2020–2022 window in code**:
+
+```
+$ python3 scripts/fetch_microstructure.py --from 2021-06-01 --to 2021-07-01
+REFUSED: 2021-06-01 is inside the sealed holdout 2020-01-01..2022-12-31
+```
+
+Note: Binance stopped publishing `bookDepth` after 2026-01-13 (1105/1334 days
+covered). Book features are NaN thereafter; HistGradientBoosting handles this
+natively, and the A-vs-C comparison is run on identical rows so coverage cannot
+bias it.
