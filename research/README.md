@@ -52,3 +52,29 @@ python3 research/run_all.py
   multi-day horizons.
 - Level clusters rebuild every 4 bars for speed. Confirm the difference is
   immaterial before relying on it in Rust.
+
+---
+
+## Research phase 1 (edge discovery)
+
+| File | Priority | Produces |
+|---|---|---|
+| `p0_validate.py` | P0 | Look-ahead, leakage, null-calibration and cost-identity tests. **Run this first; if it fails nothing downstream is trustworthy.** |
+| `p1_hurdle.py` | P1 | The required-lift table: how many pp of conditional lift a given (execution, stop, target) demands |
+| `p2_surface.py` | P2/P3 | bucket × stop × target × side surface with realised R and block-bootstrap CIs |
+| `p2b_diagnose.py` | P2/P3 | Drift-vs-edge diagnostic (LONG/SHORT mirror test) |
+| `p5_predictable.py` | P5 | Direction vs magnitude vs resolution predictability |
+
+`HYPOTHESIS_REGISTRY.md` — every hypothesis, its pre-registered kill criteria, outcome.
+`CORRECTIONS.md` — bugs found in this harness, their impact, and the fix.
+`../EDGE_REPORT.md` — the verdict.
+
+### Data regime
+
+```
+data/is/      EXPLORE   2025-01..2026-08   hypothesis generation
+data/oos/     VALIDATE  2023-01..2024-12   sign stability (contaminated by repeated inspection)
+data/sealed/  SEALED    2020-01..2022-12   NEVER OPENED -- one honest test remains
+```
+
+Do not open `data/sealed/` for exploratory work. It is worth exactly one test.
