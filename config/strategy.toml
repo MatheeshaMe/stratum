@@ -1,0 +1,66 @@
+[market]
+venue    = "hyperliquid"
+coin     = "BTC"
+quote    = "USDC"
+
+[tf]
+decision   = "1h"
+regime     = "4h"
+trigger    = "5m"
+resolution = "1m"
+
+[features]
+ema_fast = 20
+ema_slow = 50
+rsi_len  = 14
+stoch_len = 14
+vol_sma  = 20
+oi_lookback = 6
+
+[levels]
+swing_left      = 3
+swing_right     = 3
+cluster_atr     = 0.25
+touch_atr       = 0.20
+break_atr       = 0.15
+level_ttl_bars  = 300
+min_touches     = 2
+min_band_bps    = 25        # COST-4 — do not lower
+
+[exec]
+entry              = "post_only"    # COST-2
+allow_taker_entry  = false
+max_entry_reprices = 1
+entry_ttl_bars     = 2
+emergency_flatten  = "market"
+
+[costs]
+maker_bps        = 1.5
+taker_bps        = 4.5
+half_spread_bps  = 0.63
+referral_pct     = 4.0
+charge_funding   = true
+
+[risk]
+risk_pct          = 0.02      # 2% — NOT v1's 10%
+max_leverage      = 10
+min_stop_pct      = 0.006     # COST-1
+max_stop_pct      = 0.030
+liq_buffer_ratio  = 0.40      # SIZE-1
+min_notional_usd  = 10.0
+max_trades_day    = 2
+daily_kill_pct    = 0.10
+green_day_stop    = 0.25
+max_consec_losses = 4
+weekly_dd_stop    = 0.25
+
+[events]
+hold_events        = false
+event_window_hours = 4
+calendar_source    = "forexfactory"
+impact_filter      = ["High"]
+currency_filter    = ["USD"]
+
+[mode]
+auto_live       = false
+arm_ttl_minutes = 120

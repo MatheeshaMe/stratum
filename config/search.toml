@@ -1,0 +1,27 @@
+[walkforward]
+train_days = 120
+test_days  = 40
+step_days  = 40
+embargo_bars = 300            # SEARCH-1 — must be >= levels.level_ttl_bars
+
+[validation]
+fit_period     = ["2023-01-01", "2024-12-31"]
+validate_period= ["2025-01-01", "2026-08-28"]
+confirm_venue  = "hyperliquid"
+perturb_bps    = 8            # cross-venue wick noise
+require_sign_stability = true
+
+[selection]
+method       = "top_decile_median"   # SEARCH-2 — never argmax
+min_trades   = 150
+min_t_stat   = 2.0
+lambda_dd    = 0.25
+mu_trade_rate= 0.02
+
+[ranges]
+cluster_atr  = { min = 0.15, max = 0.45, step = 0.05 }
+touch_atr    = { min = 0.10, max = 0.40, step = 0.05 }
+stop_atr     = { min = 1.0,  max = 3.5,  step = 0.25 }
+rr           = { min = 1.0,  max = 3.0,  step = 0.25 }
+min_touches  = { min = 2,    max = 4,    step = 1 }
+level_ttl    = { min = 150,  max = 500,  step = 50 }

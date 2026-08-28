@@ -1,0 +1,6 @@
+data/
+*.pkl
+*.parquet
+*.sqlite
+.env
+*.key
