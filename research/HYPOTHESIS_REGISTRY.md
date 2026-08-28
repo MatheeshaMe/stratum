@@ -9,6 +9,7 @@ Statuses: `IDEA` `TESTING` `PROMISING` `OOS VALIDATED` `PAPER` `LIVE` `REJECTED`
 |---|---|---:|---|---|
 | EXPLORE | 2025-01 → 2026-08 | 830,880 | all hypothesis generation | many |
 | VALIDATE | 2023-01 → 2024-12 | 1,052,640 | sign-stability checks — **contaminated** by repeated inspection | many |
+| R1-EXPLORE | 2023-01 → 2026-08 | 1,883,520 + microstructure | R-1 exploration | many |
 | **SEALED** | **2020-01 → 2022-12** | **1,575,360** | **final holdout** | **0 — never opened** |
 
 The sealed set was fetched at the start of this phase and has not been used.
@@ -39,7 +40,36 @@ direction test             excess must not be a mirror image across LONG/SHORT (
 | H-007 | Calibrated GBM on 21 features predicts direction | 8.7k / 18.9k | AUC 0.504–0.555, Brier skill ≈ 0, all thresholds negative EV | **REJECTED** |
 | H-008 | B6 accept_break is a genuine structural edge | 13.5k | Excess over baseline +0.058R LONG / −0.070R SHORT — a **mirror image**, i.e. directional bias, not structure. CI spans zero at every (k, rr) | **REJECTED** |
 | H-009 | Wide stops + maker execution make a small lift viable | 240 cells | Hurdle falls to 1.3pp as predicted, but no bucket excess survives; positive gross R traced to period drift + vertical-barrier markout | **REJECTED** |
-| H-010 | Volatility / resolution is predictable from the state | 155k / 201k | **AUC 0.775 / 0.760; R² 0.309 / 0.275. Replicates.** | **CONFIRMED — not monetizable (see below)** |
+| H-010 | Volatility / resolution is predictable from the state | 155k / 201k | **AUC 0.775 / 0.760; R² 0.309 / 0.275. Replicates.** | **CONFIRMED — not monetizable** |
+
+### R-1 — microstructure and positioning (2026-08-28)
+
+Exploratory data: Binance USD-M BTCUSDT `metrics` (5m OI, top-trader long/short
+by account and by size, taker buy/sell volume ratio), `bookDepth` (cumulative
+depth at ±1–5% of mid, 30s), `fundingRate`. Window **2023-01-01 → 2026-08-26**,
+1,334 days. The fetcher refuses the sealed window in code, not policy.
+
+| ID | Hypothesis | n | Result | Status |
+|---|---|---:|---|---|
+| H-011 | Microstructure adds directional information beyond OHLCV | 124,638 | AUC(OHLCV+micro) − AUC(OHLCV) = **+0.000, −0.003, −0.001, +0.003, −0.004** at 5/15/30/60/180min | **REJECTED** |
+| H-012 | Within high-magnitude states, microstructure resolves direction | 356,275 | Micro makes it **worse** at every magnitude tercile (−0.003 to −0.008 AUC) | **REJECTED** |
+| H-013 | magnitude × direction produces asymmetric payoff | 356,275 | OHLCV-only spread +8.5% / +0.190 ATR **beats** combined +7.4% / +0.112 ATR | **REJECTED** (C4) |
+| H-014 | Aggressive-flow events predict reversal | 18,821 bars / 17,031 episodes | **+0.049 ATR at 30m, CI [+0.020,+0.076], survives detrending and both halves** | **CONFIRMED — 11% of cost hurdle** |
+| H-015 | Extreme top-trader short positioning predicts reversal | 18,821 / 1,653 episodes | **+0.060 ATR at 30m, CI [+0.006,+0.116], survives all controls** | **CONFIRMED — 14% of cost hurdle** |
+| H-016 | Book-imbalance shocks predict continuation | 18,835 / 8,239 | −0.042 ATR at 30m, but 2nd half only −0.011 | **REJECTED** (unstable) |
+| H-017 | Funding extremes predict direction | 18,821 / **521 episodes** | −0.320 ATR at 180m but CI relies on few episodes, effect grows with horizon (trend-like), only partly survives detrending | **REJECTED** (insufficient independent episodes) |
+
+**R-1 multiple-testing accounting**
+
+```
+tests run in R-1                        ~160
+significant after corrected block CI       5 of 21 in the controlled set
+expected by chance at a=0.05             ~1.1
+survive detrending + split-half sign       2   (H-014, H-015)
+economically sufficient                    0
+```
+
+**Cumulative across the project: ~460 hypotheses. Zero tradeable.**
 
 ## Multiple-testing accounting
 
