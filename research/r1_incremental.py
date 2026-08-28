@@ -50,7 +50,12 @@ def run(rows, tag, horizons=(1,3,6,12,36)):
     Xm, names = R1.build(b)
     n = len(b['c'])
     Xc = np.column_stack([Xo, Xm])
-    cov = np.isfinite(Xm).all(1)
+    # metrics span the full window; bookDepth ends 2026-01 (Binance stopped
+    # publishing it). Require the always-available families so A and C are
+    # compared on IDENTICAL rows; HistGradientBoosting handles NaN natively.
+    core = [i for i,nm in enumerate(names)
+            if not nm.startswith('book_')]
+    cov = np.isfinite(Xm[:, core]).all(1)
     print(f"\n{'='*96}\n{tag}   n5m={n:,}   microstructure coverage {cov.mean():.1%}"
           f"   ({Xm.shape[1]} micro features)\n{'='*96}")
     print(f"{'horizon':<12}{'n':>9}{'A OHLCV':>10}{'B MICRO':>10}{'C BOTH':>10}"
