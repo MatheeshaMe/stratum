@@ -52,8 +52,10 @@ def build(b, micro_dir="data/micro"):
     d = _align(ts, D, 10)    # bid1..bid5, ask1..ask5 (notional)
     f = _align(ts, [(r[0], r[1]) for r in F], 1)[:,0]
 
-    oi      = m[:,0]
-    tt_cnt  = m[:,2]; tt_sum = m[:,3]; cnt_ls = m[:,4]; taker = m[:,5]
+    oi      = m[:,0].copy(); oi[oi <= 0] = np.nan     # exchange reports 0 on outages
+    tt_cnt  = m[:,2].copy(); tt_sum = m[:,3].copy()
+    cnt_ls  = m[:,4].copy(); taker  = m[:,5].copy()
+    for _v in (tt_cnt, tt_sum, cnt_ls, taker): _v[_v <= 0] = np.nan
     bid = d[:,0:5]; ask = d[:,5:10]
 
     ret1  = np.concatenate([[np.nan], np.diff(c)/c[:-1]])
