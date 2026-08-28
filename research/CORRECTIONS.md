@@ -57,3 +57,40 @@ fraction so that condition is visible rather than assumed.
 
 **Impact.** All P2 cells previously flagged `<<< CLEARS HURDLE` are void and
 were re-run. See `p2_surface.py` output after the fix.
+
+---
+
+## C3 — Block bootstrap too short for slow conditioning variables (found 2026-08-28, R-1)
+
+**Bug.** `r1_events.py` set the bootstrap block length to the *forward horizon*
+(max 36 bars = 3h). But the conditioning variables are far more persistent than
+that: `funding_z` updates every 8h and mean-reverts over days;
+`toptrader_sum_ls_z` is a slow positioning series. An extreme-quantile event on
+such a variable does not produce 18,821 independent observations — it produces
+a few dozen multi-day *episodes*.
+
+**Impact.** Confidence intervals were far too narrow. The "20 significant cells
+out of 65, vs 3.2 expected" headline is not trustworthy as stated.
+
+**Fix.** Block length must reflect the persistence of the *conditioning*
+variable, not the forward horizon. Now estimated per-feature from the integrated
+autocorrelation time of the event indicator, floored at one day (288 bars).
+Also report the number of distinct episodes alongside n.
+
+---
+
+## C4 — Missing control in the magnitude x direction split (found 2026-08-28, R-1)
+
+**Bug.** Q5 split high-magnitude states by the *combined* (OHLCV+micro)
+direction model and reported a 7.5pp spread in P(up) between top and bottom
+quintiles. No OHLCV-only control was run on the same split.
+
+**Why it matters.** Q2 on the same data showed the combined model has a *lower*
+directional AUC than OHLCV alone (−0.0027 to −0.0082 at every magnitude
+tercile). A spread produced by a model that is worse than the OHLCV baseline
+cannot be evidence that microstructure adds anything — the same or a larger
+spread is likely available from OHLCV alone.
+
+**Fix.** Q5 now runs the identical quintile split three times — OHLCV-only,
+micro-only, combined — so the incremental contribution is visible rather than
+assumed.
