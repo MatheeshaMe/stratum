@@ -69,7 +69,31 @@ survive detrending + split-half sign       2   (H-014, H-015)
 economically sufficient                    0
 ```
 
-**Cumulative across the project: ~460 hypotheses. Zero tradeable.**
+**Cumulative after R-1: ~460 hypotheses. Zero tradeable.**
+
+### R-3 — intraday path / barrier research (2026-08-28)
+
+Path-based first-passage framework: absolute-% barriers, 9 stops x 9 targets x
+5 horizons, resolved on 1m bars, cost inside the search.
+
+| ID | Hypothesis | n | Result | Status |
+|---|---|---:|---|---|
+| H-018 | Some (stop, target, horizon) geometry has positive gross EV | 810 cells x 2 sides | Net EV = **−cost in every cell** (−0.0598% to −0.0708% against a 0.0663% cost). Gross ≈ 0 everywhere, exactly as the martingale predicts | **REJECTED** |
+| H-019 | Observable states move P(target first) past the cost hurdle | 210 state × cell | 10 hits vs ~10 expected by chance; all in one state family (short-term momentum) | superseded by H-020 |
+| H-020 | Short-term momentum continuation, wide barriers, selective tail | 7,618 | **VOID — C7 four-minute look-ahead.** Corrected: **−0.074%**, CI [−0.087, −0.060], both halves negative, every regime negative, flat across all parameters | **REJECTED** |
+| H-021 | Selectivity improves EV (deeper tail → better) | 12 param cells | The apparent monotone gradient (+0.088 → +0.240) was **entirely C7**; post-fix the surface is flat at ≈ −0.075% = the blended cost | **REJECTED** |
+
+**R-3 multiple-testing accounting**
+
+```
+barrier cells (unconditional)          810
+state x cell combinations              210
+momentum drill-down + stress           ~170
+total R-3                            ~1,190
+significant after C6+C7 correction        0
+```
+
+**Cumulative across the project: ~1,650 hypotheses. Zero tradeable.**
 
 ## Multiple-testing accounting
 
