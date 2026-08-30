@@ -105,3 +105,24 @@ Note: Binance stopped publishing `bookDepth` after 2026-01-13 (1105/1334 days
 covered). Book features are NaN thereafter; HistGradientBoosting handles this
 natively, and the A-vs-C comparison is run on identical rows so coverage cannot
 bias it.
+
+---
+
+## R-3 (intraday path / barrier)
+
+| File | Produces |
+|---|---|
+| `r3_frame.py` | The required-deviation table: `δ > cost/(S+T)` |
+| `r3_paths.py` | First-passage engine, absolute-% barriers on 1m bars |
+| `r3_surface.py` | 810-cell unconditional net-EV surface |
+| `r3_states.py` | 16 states × reachable barrier cells |
+| `r3_causal.py` | Trailing-threshold (C6) + C7-fixed entry indexing |
+| `r3_stress.py` | Stop slippage, parameter plateau, leverage translation |
+| `r3_portfolio.py` | Sequential one-position-at-a-time simulation |
+| `../R3_REPORT.md` | The verdict |
+
+**The C7 lesson.** `situations.agg()` returns `i1m` = index of the **first** 1m
+bar of each 5m bar. A signal computed from the 5m **close** lives at
+`i1m[k+1]-1`. Using `i1m[k]` as the entry index buys four minutes of the future.
+Any new experiment on the 5m grid must use `i1m[k+1]-1` and fill at `i1m[k+1]`.
+There is a diagnostic for this in `CORRECTIONS.md` §C7.
