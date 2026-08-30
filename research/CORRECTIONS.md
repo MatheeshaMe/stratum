@@ -94,3 +94,109 @@ spread is likely available from OHLCV alone.
 **Fix.** Q5 now runs the identical quintile split three times — OHLCV-only,
 micro-only, combined — so the incremental contribution is visible rather than
 assumed.
+
+---
+
+## C5 — Blended exit cost mislabelled as "maker out" (found 2026-08-28, R-3)
+
+**Bug.** `r3_validate.py` labelled a scenario "TAKER in / maker out (realistic)"
+and charged a single maker fee on every exit. But only the **target** exit can
+rest as a passive limit. The stop exit and the horizon (unresolved) exit are
+both takers — and in this candidate they are the **majority** of outcomes:
+
+```
+P(target first)  ~24%   -> maker exit
+P(stop first)    ~25%   -> taker exit
+P(unresolved)    ~51%   -> taker exit at the horizon
+```
+
+So the exit is maker only ~24% of the time. The correct blended exit cost is
+`0.24 x 1.5 + 0.76 x 5.13 = 4.26 bps`, not 1.5 bps.
+
+**Impact.** The scenario labelled "realistic" understated round-trip cost by
+~2.8 bps and reported +0.0130% EV. Recomputed properly the candidate is
+**negative**. The label, not the arithmetic, was doing the work.
+
+**Fix.** Exit cost is now computed from the realised outcome mix per cell rather
+than assumed, and the scenario is renamed to what it actually is.
+
+---
+
+## C6 — Look-ahead in the tail threshold (found 2026-08-28, R-3)
+
+**Bug.** The momentum candidate selects entries in the top/bottom `q` tail of the
+30-minute return. The threshold was computed as `np.nanquantile(r6, q)` over the
+**entire sample** — so the decision to trade at time *t* used the distribution of
+returns from the whole 2023–2026 period, including the future.
+
+**Why it matters here specifically.** The candidate's EV rises monotonically as
+the tail gets more extreme (+0.013% at 5%, +0.157% at 0.2%). A full-sample
+threshold systematically picks the *ex-post* most extreme moves. In a period
+where volatility trends, this silently front-runs regime changes.
+
+**Fix.** Threshold is now a trailing empirical quantile over the previous 30
+days (8,640 5m bars), recomputed at each bar and using only past data. Trades
+before the window fills are dropped.
+
+**Impact.** Re-run below. Any result quoted before this fix is void.
+
+---
+
+## C7 — Four-minute look-ahead on every R-3 conditional entry (found 2026-08-28)
+
+**Bug.** `situations.agg()` returns `i1m` = the index of the **first** 1-minute
+bar of each 5-minute bar. Every R-3 conditional experiment set
+`entry = b['i1m'][k]` and then filled at `O[entry+1]`.
+
+But the signal (`ret6`, the 30-minute return) is computed from the **close** of
+5m bar `k`, which is 1-minute index `i1m[k+1]-1`. So the fill was taken at the
+*second minute of the very bar whose close produced the signal* —
+**four minutes before the signal could exist.**
+
+**How it surfaced.** The sequential portfolio simulation returned a
+3,153,883× equity multiple and +6,430% CAGR. That is not a discovery; nothing
+real compounds like that. Working backwards from an impossible number found the
+index error.
+
+**Why it was so damaging here.** The look-ahead scales with the size of the
+signal bar. The candidate selects the most extreme 30-minute moves, so it was
+systematically buying 4 minutes into the largest up-bars in the sample. That is
+precisely why EV rose monotonically as the tail got more extreme — the
+"selectivity effect" was the look-ahead getting larger, not the edge getting
+stronger.
+
+**Fix.** `entry = i1m[k+1] - 1` (the last 1-minute bar of the signal bar), with
+the fill at `O[i1m[k+1]]` — the first price available after the signal exists.
+
+**Impact.** VOID: every R-3 conditional result — `r3_states.py`,
+`r3_validate.py`, `r3_final.py`, `r3_execution.py`, `r3_causal.py`,
+`r3_stress.py`, `r3_portfolio.py`. The unconditional surface in
+`r3_surface.py` is unaffected (it indexes the 1m grid directly and uses no 5m
+signal). Re-run below.
+
+---
+
+## C8 — Overlap contamination in the +3% forward label (found 2026-08-30, BTC+3% study)
+
+**Bug.** Step 5/6 labelled the future event as *"does `close[t]/close[t-60] - 1`
+cross +3% at any t in the next 60 minutes?"* — a rolling **trailing-window**
+condition evaluated forward.
+
+At `t = i+1` that window is `[i-59, i+1]`, which shares **59 of 60 minutes with
+the conditioning window** used to build the features. So a state that already
+contains a large trailing rise (`ret_1h >= p95`, `rsi >= p95`) is nearly
+guaranteed to satisfy the "future" condition with almost no further price
+movement. The label was largely a restatement of the feature.
+
+**Impact.** Void: the apparent directional asymmetries in step 6
+(`ret_1h >= p95` → P(+3%)=40.0% vs P(−3%)=7.4%; `rsi >= p95` → 9.8x ratio).
+These measured overlap, not prediction.
+
+**Fix.** Forward-only, non-overlapping definition anchored at the decision time:
+
+```
+UP   event:  max(High[i+1 .. i+60]) / Close[i] - 1 >=  +3%
+DOWN event:  min(Low [i+1 .. i+60]) / Close[i] - 1 <=  -3%
+```
+
+Nothing before `i` enters the label. Re-run below.
