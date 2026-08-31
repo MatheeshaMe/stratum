@@ -200,3 +200,24 @@ DOWN event:  min(Low [i+1 .. i+60]) / Close[i] - 1 <=  -3%
 ```
 
 Nothing before `i` enters the label. Re-run below.
+
+---
+
+## C9 — Entry bar excluded from the stop check (found 2026-08-30, zone study)
+
+**Bug.** `walk()` begins scanning for the stop at bar `i+1`, but the entry limit
+is filled during bar `i`. On a 1-hour bar, price can trade down to the proximal
+edge (filling the limit), continue through the whole zone, and take out the stop
+**within that same bar**. The model recorded those as still-open positions and
+gave them the later, more favourable path.
+
+**Why it matters here specifically.** The zone stop sits only ~0.9 ATR from the
+entry (median base width 0.68 ATR + 0.25 buffer). On a 1h bar whose range is
+routinely 1-2 ATR, same-bar stop-outs are common — and they are precisely the
+worst trades, so excluding them biases the result upward.
+
+**Fix.** The stop is checked on the entry bar itself, using the bar's low (long)
+or high (short) after the fill. Same-bar target hits still resolve to the stop
+per the standing ambiguity rule.
+
+**Impact.** Re-run below. Any zone result quoted before this fix is void.
