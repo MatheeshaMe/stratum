@@ -1,0 +1,179 @@
+//@version=5
+// ─────────────────────────────────────────────────────────────────────────────
+//  STRATUM S&D — the validated subset only
+//
+//  This plots exactly what survived ablation and nothing else:
+//      zone (base + impulse origin)  +  HTF regime alignment
+//      →  limit at the proximal edge
+//      →  trailing STRUCTURAL exit, no profit target
+//
+//  Deliberately NOT included, because measurement said they cost more than they
+//  add: premium/discount location, liquidity sweeps, approach deceleration,
+//  FVG, base tightness, volume confirmation, RSI, MFI, confirmation entries.
+//  They are drawn as CONTEXT ONLY (greyed) so the chart shows the trader's full
+//  reasoning while the signal uses only the part that validated.
+//
+//  Measured: n=2,668 · win 25.6% · EV +0.314 R · CI [+0.149,+0.494]
+//            median trade −1.06 R · longest losing streak 36
+//  Pre-registered BTC held-out test FAILED (CI spanned zero at n=160).
+//  Treat as a research instrument, not a funded strategy.
+// ─────────────────────────────────────────────────────────────────────────────
+indicator("Stratum S&D (validated subset)", overlay=true, max_boxes_count=500,
+          max_lines_count=500, max_labels_count=200)
+
+// ── inputs ───────────────────────────────────────────────────────────────────
+grpZ = "Zone detection"
+impMinAtr   = input.float(2.0,  "Impulse ≥ (ATR)",        group=grpZ, step=0.1)
+impMaxBars  = input.int(3,      "Impulse max bars",       group=grpZ, minval=1, maxval=5)
+impBodyR    = input.float(0.55, "Impulse mean body/range",group=grpZ, step=0.05)
+baseMaxBars = input.int(3,      "Base max bars",          group=grpZ, minval=1, maxval=5)
+baseMaxAtr  = input.float(1.0,  "Base max width (ATR)",   group=grpZ, step=0.1)
+baseBodyR   = input.float(0.5,  "Base max body/range",    group=grpZ, step=0.05)
+zoneLife    = input.int(480,    "Zone life (bars)",       group=grpZ)
+
+grpR = "Regime & risk"
+htfLen      = input.int(96,   "HTF trend lookback",  group=grpR)
+stopBufAtr  = input.float(0.25,"Stop buffer (ATR)",  group=grpR, step=0.05)
+swingTheta  = input.float(3.0, "Swing θ (ATR)",      group=grpR, step=0.5)
+minRiskPct  = input.float(0.10,"Min risk (% price)", group=grpR, step=0.01)
+maxRiskPct  = input.float(12.0,"Max risk (% price)", group=grpR, step=0.5)
+maxHold     = input.int(120,  "Max hold (bars)",     group=grpR)
+
+grpC = "Context (display only — NOT in the signal)"
+showCtx     = input.bool(true, "Show ablated context", group=grpC)
+
+atr = ta.atr(14)
+
+// ── L1/L2 regime: close beyond the trailing HTF extreme, carried forward ─────
+htfHi = ta.highest(high, htfLen)[1]
+htfLo = ta.lowest(low,  htfLen)[1]
+var int htfTrend = 0
+htfTrend := close > htfHi ? 1 : close < htfLo ? -1 : htfTrend
+
+// ── L3 structure: confirmed ZigZag swings (the trailing exit rides these) ────
+var float lastSH = na, var float lastSL = na
+var int   zzDir  = 0
+var float zzExt  = na
+if bar_index > 1
+    if zzDir >= 0
+        zzExt := na(zzExt) ? high : math.max(zzExt, high)
+        if low <= zzExt - swingTheta * atr
+            lastSH := zzExt
+            zzDir  := -1
+            zzExt  := low
+    else
+        zzExt := math.min(zzExt, low)
+        if high >= zzExt + swingTheta * atr
+            lastSL := zzExt
+            zzDir  := 1
+            zzExt  := high
+
+// ── L5 setup: base + impulse zone ────────────────────────────────────────────
+br      = math.abs(close - open) / math.max(high - low, syminfo.mintick)
+impUp   = close > open[impMaxBars - 1] and (close - open[impMaxBars-1]) >= impMinAtr*atr
+impDn   = close < open[impMaxBars - 1] and (open[impMaxBars-1] - close) >= impMinAtr*atr
+impBody = math.avg(br, br[1], br[2]) >= impBodyR
+bStart  = impMaxBars
+baseHi  = ta.highest(high, baseMaxBars)[bStart]
+baseLo  = ta.lowest(low,  baseMaxBars)[bStart]
+baseOk  = (baseHi - baseLo) <= baseMaxAtr*atr and
+          math.avg(br[bStart], br[bStart+1]) <= baseBodyR
+
+newDemand = impUp and impBody and baseOk
+newSupply = impDn and impBody and baseOk
+
+var box[]   zBox  = array.new_box()
+var float[] zProx = array.new_float()
+var float[] zDist = array.new_float()
+var int[]   zSide = array.new_int()
+var int[]   zBar  = array.new_int()
+var bool[]  zUsed = array.new_bool()
+
+if newDemand or newSupply
+    s = newDemand ? 1 : -1
+    array.push(zProx, s == 1 ? baseHi : baseLo)
+    array.push(zDist, s == 1 ? baseLo : baseHi)
+    array.push(zSide, s)
+    array.push(zBar,  bar_index)
+    array.push(zUsed, false)
+    array.push(zBox, box.new(bar_index - baseMaxBars - impMaxBars, baseHi,
+         bar_index + 40, baseLo,
+         border_color = s == 1 ? color.new(color.teal, 30) : color.new(color.maroon, 30),
+         bgcolor      = s == 1 ? color.new(color.teal, 88) : color.new(color.maroon, 88)))
+
+// ── entry: first touch of the proximal edge, HTF-aligned. Everything else NO TRADE
+var float posEntry = na, var float posStop = na
+var int   posSide  = 0,  var int posBar = na
+
+if array.size(zProx) > 0 and na(posEntry)
+    for i = array.size(zProx) - 1 to 0
+        if bar_index - array.get(zBar, i) <= zoneLife and not array.get(zUsed, i)
+            s    = array.get(zSide, i)
+            prox = array.get(zProx, i)
+            dist = array.get(zDist, i)
+            touched = s == 1 ? low <= prox : high >= prox
+            aligned = htfTrend == s
+            stop    = s == 1 ? dist - stopBufAtr*atr : dist + stopBufAtr*atr
+            riskPct = math.abs(prox - stop) / prox * 100
+            if touched
+                array.set(zUsed, i, true)                       // freshness: one shot
+                if aligned and riskPct >= minRiskPct and riskPct <= maxRiskPct
+                    posEntry := prox
+                    posStop  := stop
+                    posSide  := s
+                    posBar   := bar_index
+
+// ── management: trailing structural stop, no target ──────────────────────────
+if not na(posEntry)
+    if posSide == 1 and not na(lastSL)
+        posStop := math.max(posStop, lastSL - stopBufAtr*atr)
+    if posSide == -1 and not na(lastSH)
+        posStop := math.min(posStop, lastSH + stopBufAtr*atr)
+    hitStop = posSide == 1 ? low <= posStop : high >= posStop
+    if hitStop or (bar_index - posBar) >= maxHold
+        label.new(bar_index, posSide == 1 ? low : high,
+                  hitStop ? "exit" : "time", style=label.style_label_center,
+                  color=color.new(color.gray, 40), textcolor=color.white, size=size.tiny)
+        posEntry := na, posStop := na, posSide := 0, posBar := na
+
+plot(posSide != 0 ? posEntry : na, "entry", color.new(color.blue, 0),  style=plot.style_linebr)
+plot(posSide != 0 ? posStop  : na, "stop",  color.new(color.red,  0),  style=plot.style_linebr)
+plotshape(posSide == 1  and posBar == bar_index, "LONG",  shape.triangleup,
+          location.belowbar, color.teal,   size=size.small)
+plotshape(posSide == -1 and posBar == bar_index, "SHORT", shape.triangledown,
+          location.abovebar, color.maroon, size=size.small)
+
+// ── NO-TRADE state, made explicit ────────────────────────────────────────────
+bgcolor(htfTrend == 0 ? color.new(color.gray, 92) : na, title="no HTF regime → NO TRADE")
+
+// ── context that was ABLATED — drawn so the reasoning is visible, never used ──
+// Measured contribution: HTF location −0.295 R · liquidity sweep collapses the
+// sample 716→13 · approach deceleration → 0 setups. Shown greyed, on purpose.
+prevHi = ta.highest(high, htfLen)[1]
+prevLo = ta.lowest(low,  htfLen)[1]
+plot(showCtx ? prevHi : na, "liquidity above (ablated)", color.new(color.gray, 55))
+plot(showCtx ? prevLo : na, "liquidity below (ablated)", color.new(color.gray, 55))
+sweepLo = low  < prevLo and close > prevLo
+sweepHi = high > prevHi and close < prevHi
+plotshape(showCtx and sweepLo, "sweep low (ablated)",  shape.xcross, location.belowbar,
+          color.new(color.gray, 40), size=size.tiny)
+plotshape(showCtx and sweepHi, "sweep high (ablated)", shape.xcross, location.abovebar,
+          color.new(color.gray, 40), size=size.tiny)
+
+// ── thesis readout ───────────────────────────────────────────────────────────
+var table tb = table.new(position.top_right, 2, 5, border_width=1)
+if barstate.islast
+    table.cell(tb, 0, 0, "REGIME",   text_color=color.silver, text_size=size.tiny)
+    table.cell(tb, 1, 0, htfTrend == 1 ? "bull" : htfTrend == -1 ? "bear" : "none",
+               text_color = htfTrend == 1 ? color.teal : htfTrend == -1 ? color.maroon : color.gray,
+               text_size=size.tiny)
+    table.cell(tb, 0, 1, "ZONES LIVE", text_color=color.silver, text_size=size.tiny)
+    table.cell(tb, 1, 1, str.tostring(array.size(zProx)), text_color=color.white, text_size=size.tiny)
+    table.cell(tb, 0, 2, "POSITION", text_color=color.silver, text_size=size.tiny)
+    table.cell(tb, 1, 2, posSide == 1 ? "LONG" : posSide == -1 ? "SHORT" : "NO TRADE",
+               text_color = posSide == 0 ? color.gray : color.white, text_size=size.tiny)
+    table.cell(tb, 0, 3, "STOP", text_color=color.silver, text_size=size.tiny)
+    table.cell(tb, 1, 3, posSide == 0 ? "—" : str.tostring(posStop, format.mintick),
+               text_color=color.red, text_size=size.tiny)
+    table.cell(tb, 0, 4, "EXIT", text_color=color.silver, text_size=size.tiny)
+    table.cell(tb, 1, 4, "structural trail", text_color=color.white, text_size=size.tiny)
