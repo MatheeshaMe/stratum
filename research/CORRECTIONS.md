@@ -249,3 +249,63 @@ at `i+1`.
 **Impact.** VOID: all Phase 4–8 results produced before this fix — the discovery
 ladder, the validation table, the held-out test and the cross-asset table.
 Re-run below.
+
+---
+
+## C11 — Structural stop on the wrong side of entry (found 2026-09-01, policy study)
+
+**Bug.** `run_trade()` computed `risk = abs(entry - stop)` without checking that
+the stop was on the *correct* side of the entry.
+
+The reversion setups fire on a liquidity sweep — a bar that pokes beyond the
+trailing extreme and closes back inside. That new extreme is **not yet a
+confirmed ZigZag pivot**, so `structural_stop()` returns an *older* swing level,
+which is frequently on the wrong side of the entry price.
+
+**Measured incidence:** the stop was inverted in **70.1% of shorts (396/565)**
+and **59.9% of longs (185/309)**.
+
+**Why it was so damaging.** With `risk` taken as an absolute value the trade was
+never rejected. On the entry bar the stop test `H[j] >= stop` (short) is
+immediately true because the stop sits *below* price, and the payoff evaluates to
+
+```
+R = side*(stop-entry)/risk = -1 * (negative) / positive = +1.0 R
+```
+
+**Every inverted-stop trade booked an instant +1R win.** That is precisely the
+75-77% win rate and the 2.2-4.4 profit factors reported before the fix.
+
+**Fix.** Reject any setup where the stop is not strictly beyond the entry in the
+losing direction, and likewise where the target is not strictly beyond the entry
+in the winning direction.
+
+**Impact.** VOID: every result in the policy phase before this fix — the
+unconditional action-value table, the policy comparison, the entry-timing
+sensitivity, the holdout and the cross-asset table.
+
+---
+
+## C12 — Trailing stop allowed to jump past price into locked profit (2026-09-01)
+
+**Bug.** The trailing update took `st = min(st, level)` (short) without checking
+that `level` was still beyond current price. After a liquidity sweep the fresh
+extreme is not yet a confirmed pivot, so `S['sh']` is a **stale level already on
+the profitable side of the entry**. The stop was moved there on the first bar
+after entry, and that same bar's high then "hit" it — booking profit price had
+never delivered.
+
+**Measured incidence (sweep reversals):** the trailed stop jumped past price on
+bar 1 in **63.2% of trades (552/874)**, median fake gain **+2.56 R**, max +44.1 R.
+This produced the reported +1.761 R / 57% win rate / PF 5.32.
+
+**Fix.** A trailing stop may only move to a level that is still beyond the
+current bar's extreme in the losing direction:
+long `cand < L[j]`, short `cand > H[j]`. Otherwise it does not move.
+
+**Scope check (important).** This bug does **not** affect `STRUCTURE_STUDY.md` or
+`TRADER_SYSTEM.md`. Audited: 0 of 651 break-of-structure setups. A BOS entry
+means price has just broken the swing, so the opposing swing is genuinely behind
+price and the stale-level condition cannot arise. Those results stand.
+
+**Impact.** VOID: the sweep-extreme-stop results in the policy phase.
