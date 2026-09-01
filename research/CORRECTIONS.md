@@ -221,3 +221,31 @@ or high (short) after the fill. Same-bar target hits still resolve to the stop
 per the standing ambiguity rule.
 
 **Impact.** Re-run below. Any zone result quoted before this fix is void.
+
+---
+
+## C10 — Target allowed to trigger on the entry bar (found 2026-08-31, trader study)
+
+**Bug.** `setups.manage()` checked BOTH the stop and the target on the entry bar
+`i`. A limit at the proximal edge fills partway through bar `i`; the remainder
+of that bar could then, in the model, run all the way to a 2R target and book a
+win.
+
+**Why that is wrong.** OHLC gives no intrabar path. For a long, price must trade
+DOWN to fill the limit; whether it subsequently reached the target *within the
+same bar* or reached it only after first taking out the stop is unknowable. The
+standing rule in this project is that same-bar ambiguity resolves AGAINST the
+trade — so the entry bar may trigger the stop but not the target.
+
+**How it surfaced.** Two phases of this project disagreed. `ZONES_STUDY`
+reported 1h zones + trend alignment + fixed target at ≈ +0.005 R; the trader
+engine reported the same idea at +0.36 R held out. Diffing the two execution
+loops found that `h6_fixed.walk()` allows only the stop on bar `i` while
+`setups.manage()` allowed both.
+
+**Fix.** On bar `i`: evaluate the stop only. Targets and trailing updates begin
+at `i+1`.
+
+**Impact.** VOID: all Phase 4–8 results produced before this fix — the discovery
+ladder, the validation table, the held-out test and the cross-asset table.
+Re-run below.
