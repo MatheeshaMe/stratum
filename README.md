@@ -16,6 +16,7 @@ Descriptive studies:
 - [`BTC_PLUS3PCT_STUDY.md`](BTC_PLUS3PCT_STUDY.md) — what BTC does before, during and after a +3% move
 - [`ACCOUNT_3PCT_STUDY.md`](ACCOUNT_3PCT_STUDY.md) — can leverage deliver +3% account return per trade? (no: breakeven needs 48.1% wins, market offers 32.7%)
 - [`STRUCTURE_STUDY.md`](STRUCTURE_STUDY.md) — automated market-structure recognition across 5 assets (recognition works, AUC 0.635 on breakout acceptance; capture does not)
+- [`TRADER_SYSTEM.md`](TRADER_SYSTEM.md) — reconstructing the discretionary S&D trader. Ablation kills the context hierarchy; zone + HTF alignment + trailing structural exit survives at +0.314R but fails its pre-registered held-out test. Pine Script in [`pine/`](pine/)
 - [`ZONES_STUDY.md`](ZONES_STUDY.md) — supply/demand zone mechanism test (freshness decay confirmed; impulse strength, fresh-zone advantage and liquidity sweeps all falsified; DO NOT BUILD)
 - [`R3_ENGINE_REPORT.md`](R3_ENGINE_REPORT.md) — **sealed 2020-2022 window opened and spent.** Frozen hypothesis FAILED pre-registered criteria (+0.118R, CI spans zero, long-side only). Verdict: PROMISING BUT UNPROVEN
 
