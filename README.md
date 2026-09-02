@@ -16,6 +16,7 @@ Descriptive studies:
 - [`BTC_PLUS3PCT_STUDY.md`](BTC_PLUS3PCT_STUDY.md) — what BTC does before, during and after a +3% move
 - [`ACCOUNT_3PCT_STUDY.md`](ACCOUNT_3PCT_STUDY.md) — can leverage deliver +3% account return per trade? (no: breakeven needs 48.1% wins, market offers 32.7%)
 - [`STRUCTURE_STUDY.md`](STRUCTURE_STUDY.md) — automated market-structure recognition across 5 assets (recognition works, AUC 0.635 on breakout acceptance; capture does not)
+- [`BL05_DECOMPOSITION.md`](BL05_DECOMPOSITION.md) — N-3. Compensation breaks **partially** (κ≈0.58 unconditional, 0.16 for sweep→acceptance→displacement) — but only in the body. Raw κ swings −286 to +14.7 because forward-return **kurtosis reaches 12,523**
 - [`BEHAVIORAL_LIBRARY.md`](BEHAVIORAL_LIBRARY.md) — validated map of conditional market behaviour. **Directional info DOES replicate as P(up) (6 of 10 branches, all 6 era-asset cells)** — the prior phase's mean-shift measurement missed it. Payoff moves the other way by an offsetting amount
 - [`INTERPRETATION_ENGINE.md`](INTERPRETATION_ENGINE.md) — market interpretation layer, not a strategy. Measures distributional divergence: **magnitude/timing information replicates across 6 era-asset cells; directional does not (1 of 9)**
 - [`ADAPTIVE_POLICY.md`](ADAPTIVE_POLICY.md) — state→action policy with dynamic stops/targets. Policy loses to WAIT out of sample; two more execution bugs (C11, C12) found. Contains the efficiency identity: available R:R is offset by hit rate to within 0.4%
